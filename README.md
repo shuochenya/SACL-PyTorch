@@ -18,6 +18,6 @@ Run the following command to evaluate the model by (fine-tuning) a linear classi
 python cl_test.py --model_path results/xxx.pth
 ```
 
-A pretrained (regularized) model can be downloaded from [here](https://drive.google.com/file/d/1TodX_1AwigIrm3CEMy-RbaMcNoKG5kz1/view?usp=sharing)
+A pretrained (regularized) model can be downloaded from [here](https://drive.google.com/file/d/1NkFd7C5mp2Hnx9Reh-1HWir6NihIUd9z/view)
 
 This code is mainly inspired by [SimCLR](https://github.com/leftthomas/SimCLR)
