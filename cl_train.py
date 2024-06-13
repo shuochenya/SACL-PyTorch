@@ -26,21 +26,19 @@ def get_negative_mask(batch_size):
 def train(net, data_loader, train_optimizer, temperature, debiased, tau_plus, alpha):
     net.train()
     total_loss, total_num, train_bar = 0.0, 0, tqdm(data_loader)
-    for pos_a, pos_b, target in train_bar:
-        pos_a, pos_b = pos_a.cuda(non_blocking=True), pos_b.cuda(non_blocking=True)
-        #feature_1, out_1, re_feature_1 = net(pos_1)
-        #feature_2, out_2, re_feature_2 = net(pos_2)
-        feature_a, out_a_1, out_a_2, out_a_3, out_a_4, out_a_5 = net(pos_a);
-        feature_b, out_b_1, out_b_2, out_b_3, out_b_4, out_b_5 = net(pos_b);
+    for pos_1, pos_2, target in train_bar:
+        pos_1, pos_2 = pos_1.cuda(non_blocking=True), pos_2.cuda(non_blocking=True)
+        feature_1, out_1, re_feature_1 = net(pos_1)
+        feature_2, out_2, re_feature_2 = net(pos_2)
 
         # neg score
-        out = torch.cat([out_a_1, out_b_1], dim=0)
+        out = torch.cat([out_1, out_2], dim=0)
         neg = torch.exp(torch.mm(out, out.t().contiguous()) / temperature)
         mask = get_negative_mask(batch_size).cuda()
         neg = neg.masked_select(mask).view(2 * batch_size, -1)
 
         # pos score
-        pos = torch.exp(torch.sum(out_a_1 * out_b_1, dim=-1) / temperature)
+        pos = torch.exp(torch.sum(out_1 * out_2, dim=-1) / temperature)
         pos = torch.cat([pos, pos], dim=0)
 
         # estimator g()
@@ -52,16 +50,13 @@ def train(net, data_loader, train_optimizer, temperature, debiased, tau_plus, al
         else:'''
         Ng = neg.sum(dim=-1)
 
-        lambda1, lambda2, lambda3, lambda4, lambda5 = 2, 4, 8, 16, 32
-        tol = 0.1
-        D1, D2, D3, D4, D5 = out_a_1*out_b_1-tol, out_a_2*out_b_2-tol, out_a_3*out_b_3-tol, out_a_4*out_b_4-tol, out_a_5*out_b_5-tol
-        max_0 = nn.ReLU()
-        regularization = (lambda1*max_0(D1) + lambda2*max_0(D2) + lambda3*max_0(D3) + lambda4*max_0(D4) + lambda5*max_0(D5))/batch_size
+        # reconstruction
+        re_diff = (torch.norm(feature_1 - re_feature_1, p='fro') + torch.norm(feature_2 - re_feature_2, p='fro'))/batch_size
 
         # contrastive loss
         contrast_loss = (- torch.log(pos / (pos + Ng) )).mean()  
         
-        loss = contrast_loss  +  alpha*regularization
+        loss = contrast_loss  +  alpha * re_diff
 
         train_optimizer.zero_grad()
         loss.backward()
